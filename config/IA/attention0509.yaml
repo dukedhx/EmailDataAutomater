@@ -1,0 +1,6 @@
+--- #DO NOT REMOVE OR CHANGE THIS LINE! ALWAYS LEAVE SPACE AFTER COLONS!
+buval: "^(?!(?i)mexico(?-i)$)"
+rDate: date,>=,now,+3
+po@Start: poStart
+po@End:	poEnd
+po@poReinspection: ^(?i)no(?-i)$

@@ -1,0 +1,118 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="persistence\**" />
+    <Compile Remove="temp\**" />
+    <EmbeddedResource Remove="persistence\**" />
+    <EmbeddedResource Remove="temp\**" />
+    <None Remove="persistence\**" />
+    <None Remove="temp\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="appsettings.json" />
+    <None Remove="config\IA\attention.yaml" />
+    <None Remove="config\IA\attention0509.yaml" />
+    <None Remove="config\IA\dataResultMapping.yaml" />
+    <None Remove="config\IA\dataResultValMapping.yaml" />
+    <None Remove="config\IA\emailmapping.yaml" />
+    <None Remove="config\IA\validation.yaml" />
+    <None Remove="config\IA\validation0509.yaml" />
+    <None Remove="config\IA\vfremindermapping.yaml" />
+    <None Remove="config\IA\vfvalidation.yaml" />
+    <None Remove="nlog.config" />
+    <None Remove="Scripts\getControlValue.vbs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\attention0509.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\dataResultValMapping.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\validation0509.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\vfremindermapping.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\vfvalidation.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\attention.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\dataResultMapping.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\emailmapping.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\IA\validation.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="config\nlog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Scripts\getControlValue.vbs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="4.5.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Office.Interop.Outlook" Version="15.0.4797.1003" />
+    <PackageReference Include="YamlDotNet.NetCore" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClassLibrary1\ClassLibrary1.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Entities\DB\" />
+    <Folder Include="logs\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="EntityFramework">
+      <HintPath>EntityFramework</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>System</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition">
+      <HintPath>System.ComponentModel.Composition</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations">
+      <HintPath>System.ComponentModel.DataAnnotations</HintPath>
+    </Reference>
+    <Reference Include="System.Data">
+      <HintPath>System.Data</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

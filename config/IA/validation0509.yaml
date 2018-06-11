@@ -1,0 +1,22 @@
+--- #DO NOT REMOVE OR CHANGE THIS LINE! ALWAYS LEAVE SPACE AFTER COLONS!
+buval: "^(?i)(mexico|ushi|orchard|rona)(?-i)$"
+VID: ^\d{4}$
+FID: ^\d{1,255}$
+vName: ^(.|\n){1,255}$
+vTel: ^(.|\n){1,255}$
+fName: ^(.|\n){1,255}$
+fNameC: ^(.|\n){1,255}$
+fLocE: ^(.|\n){1,255}$
+fLocC: ^(.|\n){1,255}$
+fCon: ^(.|\n){1,255}$
+fTel: ^(.|\n){1,255}$
+rDate: date
+po@Start: poStart
+po@End:	poEnd
+po@poStart: ^\d{1,255}$
+po@poReinspection: "^(?i)(Re-Inspection b/c Missing|Re-Inspection b/c Fail|No)(?-i)$"
+po@typeofInspection: ^(?i)(new|cancellation)(?-i)$
+po@itemNo: ^\d*$
+po@multiFactory: ^(?i)yes|no(?-i)$
+po@quantity: ^\d*$
+po@specialPro: "^(?i)(^$|TAT - TRIM A TREE PROGRAM|CNY - CHINESE NEW YEAR PROGRAM|VPXD - CROSS DOCK|PROMOTION - ORDER NEED TO CATCH IN STORE DATE|BATCH)(?-i)$"
