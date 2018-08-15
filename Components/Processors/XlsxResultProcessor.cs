@@ -10,14 +10,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ConsoleApp1.Components.Processors
+namespace ConsoleApp1.Components.Contollers
 {
     public class XlsxResultProcessor : IProcessor<IDictionary<String, String>, Object>, IDisposable
     {
         private Dictionary<string, string[]> fflds;
         private ExcelPackage p;
         private ExcelWorksheet worksheet;
-        private int r;
+        private int r,c=0;
         public IEnumerable<SealedNameList> headers;
         //public IEnumerable<SealedNameList> headers { set { if (headers == null)_headers = value  } get => _headers; }
         public XlsxResultProcessor(String path,String cwwsn, IDictionary<string, IEnumerable<KeyValuePair<string, string>>> bindmaps, IEnumerable<SealedNameList>  headers)
@@ -29,19 +29,28 @@ namespace ConsoleApp1.Components.Processors
 
             
             this.headers = headers;
+            if(!p.Workbook.Names.ContainsKey("_end_")&&(worksheet.Dimension?.End?.Row ??0) <1)
             foreach (var header in headers)
                 worksheet.Cells[1, header.value].Value = header.name; 
-            r = (worksheet.Dimension?.End?.Row??0 )+ 1;
+            if (p.Workbook.Names.ContainsKey("_end_")) {
+                r = p.Workbook.Names["_end_"].Start.Row -1;
+                c = p.Workbook.Names["_end_"].Start.Column - 1;}
+            else
+            r = (worksheet.Dimension?.End?.Row ?? 0) + 1;
+
 
         }
 
         public  bool? process(IDictionary<string, string> subject, object controller, IDictionary<string, string> configs = null)
         {
+            
+
             foreach (var k in subject)
             {
                 var header = headers.FirstOrDefault(h => string.Equals(h.name, k.Key, StringComparison.OrdinalIgnoreCase));
                 if (header != null) {
-                    var cell = worksheet.Cells[r, header.value];
+                    
+                    var cell = worksheet.Cells[r, c+header.value];
                     cell.Value = fflds.GetValueOrDefault("date")?.Any(f => f.Equals(k.Key, StringComparison.OrdinalIgnoreCase)) == true ? DateTime.Parse(k.Value).ToString("MM/dd/yyyy") : k.Value;
 
                     if (fflds.GetValueOrDefault("number")?.Any(f => f.Equals(k.Key, StringComparison.OrdinalIgnoreCase)) == true)
@@ -52,6 +61,8 @@ namespace ConsoleApp1.Components.Processors
             }
             //if(subject.Any())
             r++;
+            worksheet.InsertRow(r, 1);
+
             return true;
         }
 
@@ -61,20 +72,20 @@ namespace ConsoleApp1.Components.Processors
 
         protected void postProduction()
         {
-            var ccoli = headers.FirstOrDefault(h => string.Equals(h.name, "count po", StringComparison.OrdinalIgnoreCase))?.value ?? -1;
-            var pocol = ConsolidateHelper.GetColumnName(headers.First(h => string.Equals(h.name, "IA PO #", StringComparison.OrdinalIgnoreCase)).value - 1);
-            if (ccoli > -1 && !String.IsNullOrWhiteSpace(pocol))
-            {
-                int r = worksheet.Dimension.End.Row + 1;
+            //var ccoli = headers.FirstOrDefault(h => string.Equals(h.name, "count po", StringComparison.OrdinalIgnoreCase))?.value ?? -1;
+            //var pocol = ConsolidateHelper.GetColumnName(headers.First(h => string.Equals(h.name, "IA PO #", StringComparison.OrdinalIgnoreCase)).value - 1);
+            //if (ccoli > -1 && !String.IsNullOrWhiteSpace(pocol))
+            //{
+            //    int r = worksheet.Dimension.End.Row + 1;
 
-                worksheet.Cells[2, ccoli].CreateArrayFormula($"SUM(1/COUNTIF({pocol}2:{pocol}{r - 1},{pocol}2:{pocol}{r - 1}))");
-                worksheet.Cells[2, ccoli].Calculate();
-                int iac = 0;
-                var tcell = worksheet.Cells[2, headers.First(h => string.Equals(h.name, "Total IA Count", StringComparison.OrdinalIgnoreCase)).value];
-                Int32.TryParse(tcell.Value?.ToString(), out iac);
-                tcell.Value = iac + 1;
+            //    worksheet.Cells[2, ccoli].CreateArrayFormula($"SUM(1/COUNTIF({pocol}2:{pocol}{r - 1},{pocol}2:{pocol}{r - 1}))");
+            //    worksheet.Cells[2, ccoli].Calculate();
+            //    int iac = 0;
+            //    var tcell = worksheet.Cells[2, headers.First(h => string.Equals(h.name, "Total IA Count", StringComparison.OrdinalIgnoreCase)).value];
+            //    Int32.TryParse(tcell.Value?.ToString(), out iac);
+            //    tcell.Value = iac + 1;
 
-            }
+            //}
         }
 
         protected virtual void Dispose(bool disposing)

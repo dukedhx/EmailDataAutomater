@@ -16,48 +16,12 @@
 
   <ItemGroup>
     <None Remove="appsettings.json" />
-    <None Remove="config\IA\attention.yaml" />
-    <None Remove="config\IA\attention0509.yaml" />
-    <None Remove="config\IA\dataResultMapping.yaml" />
-    <None Remove="config\IA\dataResultValMapping.yaml" />
-    <None Remove="config\IA\emailmapping.yaml" />
-    <None Remove="config\IA\validation.yaml" />
-    <None Remove="config\IA\validation0509.yaml" />
-    <None Remove="config\IA\vfremindermapping.yaml" />
-    <None Remove="config\IA\vfvalidation.yaml" />
     <None Remove="nlog.config" />
     <None Remove="Scripts\getControlValue.vbs" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\attention0509.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\dataResultValMapping.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\validation0509.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\vfremindermapping.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\vfvalidation.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\attention.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\dataResultMapping.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\emailmapping.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="config\IA\validation.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="config\nlog.config">

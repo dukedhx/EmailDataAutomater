@@ -8,16 +8,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace ConsoleApp1.Components.Controllers
 {
     public class EmailResponseController : IControl<Outlook.MailItem, EmailResponseConfig, Boolean>
     {
+        
 
         protected String getHtmlBodyFromTemplate(EmailResponseConfig configCol)
         {
-            String htmlbody = null, mmsg = configCol.rows == null ? configCol.defaultMessage : $"<table border='1'>{String.Join(Environment.NewLine, configCol.rows.Select(r => $"<tr><td>{r.Item1}</td><td>{r.Item2}</td></tr>"))}</table>";
+            String htmlbody = null, mmsg = configCol.rows == null ? (configCol.defaultMessage??"") : $"<table border='1'>{String.Join(Environment.NewLine, configCol.rows.Select(r => $"<tr><td>{r.Item1}</td><td>{r.Item2}</td></tr>"))}</table>";
 
 
             if (configCol.template?.Exists == true)
@@ -43,8 +45,9 @@ namespace ConsoleApp1.Components.Controllers
         public bool execute(Outlook.MailItem subject, EmailResponseConfig configCol, IDictionary<string, string> configs = null)
         {
             Outlook.MailItem reply = null;
+            if(subject!=null)
             reply = subject.Reply();
-            var sbc = subject.SenderEmailAddress;
+          //  var sbc = subject.SenderEmailAddress;
 
             if (configCol.replyRecipients == null)
             {
@@ -69,7 +72,7 @@ namespace ConsoleApp1.Components.Controllers
             }
             else
             {
-                reply = subject.Forward();
+                reply = subject==null?(Outlook.MailItem)configCol.oApp.CreateItem(Outlook.OlItemType.olMailItem): subject.Forward();
                 foreach (var e in configCol.replyRecipients.Where(e => OutlookHelper.EmailAddrRegex.IsMatch(e)))
                     reply.Recipients.Add(e);
             }
@@ -84,12 +87,32 @@ namespace ConsoleApp1.Components.Controllers
 
             var subj = reply.Subject;
             reply.SentOnBehalfOfName = configCol.sentonbehalf;
+            String tdir = Path.Combine(Tools.GetExecutingPath,$"temp\\{Guid.NewGuid()}\\");
 
+            foreach (String path in  configCol.attachments?? Enumerable.Empty<String>() )
+            {
+
+
+                String tpath = tdir + Path.GetFileName(path);
+                if (Tools.FileOverWriteCopy(path, tpath, false))
+
+                    reply.Attachments.Add(tpath);
+                else throw new Exception("Unable to attach "+path);
+
+            }
 
             if (!reply.Recipients.ResolveAll()) reply.CC = "";
+            reply.Subject = configCol.emailSubject ?? reply.Subject;
             reply.Send();
             Logger.WriteToConsole($"Sent [{subj}]");
             Marshal.ReleaseComObject(reply);
+            if(Directory.Exists(tdir))
+            try {
+                Directory.Delete(tdir,true);
+            }
+            catch (Exception ex) {
+                Logger.Log(ex);
+            }
             reply = null;
             return true;
         }

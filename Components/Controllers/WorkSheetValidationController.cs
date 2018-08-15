@@ -31,6 +31,7 @@ namespace ConsoleApp1.Components.Controllers
                 foreach (var vc in configCol.Where(vc => vc.ID != null && vc.criteria!=null))
                 {
                     ValidResults errors = new ValidResults();
+                    errors.config = new ValidResultConfig();
                     errors.sheetName = configs?[WSVconfigsEnum.wwsn.ToString()];
                     errorscol.Add(vc.ID, errors);
 
@@ -47,18 +48,31 @@ namespace ConsoleApp1.Components.Controllers
                             var keys = entry.Key.ToString().Split("@");
                             var keyname = keys.Last();
                             var matcher = entry.Value.ToString();
-                            if (keys.Length > 1)
-                            {
-                                errors["hasRow"] = false;
+                        if (keys.Length > 1)
+                        {
+                            errors["hasRow"] = false;
 
-                                MatcherCol amc;
-                                var dkey = keys[0].ToLower();
-                                if (!MatcherDict.TryGetValue(dkey, out amc)) MatcherDict.Add(dkey, amc = new MatcherCol());
+                            MatcherCol amc;
+                            var dkey = keys[0].ToLower();
+                            if (!MatcherDict.TryGetValue(dkey, out amc)) MatcherDict.Add(dkey, amc = new MatcherCol());
+                            switch (keyname.ToLower()) {
+                                case "resultpath": errors.config.targetPath = matcher;break;
+                                case "targetsheet": errors.config.targetSheet = matcher; break;
+                                case "templatepath": errors.config.tempatePath = matcher; break;
+                                case "sqlpath": errors.config.sqlPath = matcher; break;
+                                case "sqlquerytemplate": errors.config.sqlQueryTemplate = matcher; break;
+                                case "sqltemplatepath": errors.config.sqlTemplatePath = matcher; break;
+                                case "headerspath": errors.config.headersPath = matcher; break;
+                                case "iaformatfields": errors.config.IAFormatFields = matcher; break;
+                                case "resultmappingpath": errors.config.resultMappingPath = matcher; break;
+                                case "resultvalmappingpath": errors.config.resultValMappingPath = matcher; break;
 
-                                if (keyname.ToLower().Equals("start") && wb.Names.ContainsKey(matcher)) amc.StartRow = wb.Names[matcher].End.Row + 1;
-                                else if (keyname.ToLower().Equals("end") && wb.Names.ContainsKey(matcher)) amc.EndRow = wb.Names[matcher].Start.Row - 1;
-                                else if (wb.Names.ContainsKey(keyname)) amc.Add(keyname, Tuple.Create(wb.Names[keyname].Start.Column, matcher));
-                                else errors.Add(keyname, null);
+                                case "start": if (wb.Names.ContainsKey(matcher)) amc.StartRow = wb.Names[matcher].End.Row + 1; break;
+                                case "end":if(wb.Names.ContainsKey(matcher)) amc.EndRow = wb.Names[matcher].Start.Row - 1; break;
+                                default:
+                                    if (wb.Names.ContainsKey(keyname)) amc.Add(keyname, Tuple.Create(wb.Names[keyname].Start.Column, matcher));else
+                               errors.Add(keyname, null);break;
+                        }
                             }
 
                             else if ((keys = entry.Key.ToString().Split("!")).Length > 1)

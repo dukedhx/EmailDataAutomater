@@ -1,7 +1,7 @@
 ﻿using ClassLibrary1.Utils;
 using ClassLibrary1.Utils.Persistence;
 using ConsoleApp1.Components.Interfaces;
-using ConsoleApp1.Components.Processors;
+using ConsoleApp1.Components.Contollers;
 using ConsoleApp1.Entities.Misc;
 using ConsoleApp1.Utils;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp1.Components.Consolidators
 {
-    public enum XCDconfigsEnum { DRoptions=0, dpath = 1, macrosnippet = 2, version = 3, resultMap=4, IAFormatFields=5, dataResultValMapping=6,wwsn=7,cwwsn=8,headersID=9 }
+    public enum XCDconfigsEnum { DRoptions=0, dpath = 1, macrosnippet = 2, version = 3, resultMap=4, IAFormatFields=5, dataResultValMapping=6,wwsn=7,cwwsn=8,headersID=9,xlsxtemplate=10 }
 
     public class XlsxConsolidator : IConsolidator<IEnumerable< IProcessor<IDictionary<String, String>, Object>>>
     {
@@ -39,7 +39,7 @@ namespace ConsoleApp1.Components.Consolidators
              
                     bool success = true;
 
-
+            if(subject?.Any()==true)
             foreach (var results in resultsCol)
             {
                 configs[XCDconfigsEnum.wwsn.ToString()] = results.Value.sheetName;
@@ -104,7 +104,7 @@ namespace ConsoleApp1.Components.Consolidators
 
                 foreach (var matcher in matcherdict.Where(md => md.Value.isRangeValid).Select(md => md.Value.range).Collapse(Comparer<int>.Create((x, y) => { return x - y; })).Select(rr => Tuple.Create(rr, matcherdict.Values.Where(v => v.Values.Any()).SelectMany(e => e.Keys).Where(e => ResultMap.ContainsKey(e)).Select(e => ResultMap[e]))))
                 {
-
+                    
                     //  var rdr = ;
                     int StartRow = matcher.Item1.Start - 1, EndRow = matcher.Item1.End;
                     while (StartRow++ < EndRow)

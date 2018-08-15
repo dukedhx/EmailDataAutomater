@@ -9,11 +9,12 @@ namespace ConsoleApp1.Entities.Control
    public class EmailResponseConfig
     {
         public String[] replyRecipients, ccRecipients;
+        public String[] attachments;
         public FileInfo template;
         public Dictionary<String, String> ResultMap;
         public IEnumerable<Tuple<String, String, Boolean?>> rows;
         public Outlook.Application oApp;
         public String defaultMessage, sentonbehalf,savesentfolder;
-        
+        public String emailSubject;
     }
 }

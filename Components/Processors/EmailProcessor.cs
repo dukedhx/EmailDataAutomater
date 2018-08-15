@@ -17,8 +17,9 @@ using ClassLibrary1.Utils.Persistence;
 using System.Threading;
 //using OfficeOpenXml;
 using YamlDotNet.RepresentationModel;
-using ConsoleApp1.Components.Processors;
+using ConsoleApp1.Components.Contollers;
 using System.Threading.Tasks;
+using ConsoleApp1.Util;
 
 public enum EPconfigsEnum { sucTemplate=1, sentonbehalf=3, saveSentFolder = 4 ,sucFolder=5, AdminEmail =6, rdestFolder=7,retfolder=8 , destFolder =9,storename=10, dataResultMappingPath =11, IAFormatFields =12, dataResultValMapping =13,saveMailPath=14,emailLogConnString=15, emailLogTemplate=16}
 
@@ -31,6 +32,7 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
     public Outlook.Application oApp;
     public bool sendResponse, saveChanges, moveFolder;
     public IEnumerable<EmailValidatorConfig> validColsCols;
+    public ProperNameController pnc;
     protected String currentEmailFilePath;
     protected bool mergeTempResults(String tdpath, String dpath)
     {
@@ -44,9 +46,12 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
 
                 if (Monitor.TryEnter(lockobj))
                 {
-                    Tools.FileOverWriteMove(tdpath, dpath);
-                    Logger.Log($"Moved to {dpath}!");
-                    return true;
+                    if (Tools.FileOverWriteMove(tdpath, dpath))
+                    {
+                        Logger.Log($"Moved to {dpath}!");
+                        return true;
+                    }
+                    return false;
                 }
 
                 Thread.Sleep(1);
@@ -67,30 +72,21 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
     }
 
 
-    protected IDictionary<string, IEnumerable<KeyValuePair<string, string>>> getBindMaps(IDictionary<String,String> configs)
+    protected IDictionary<string, IEnumerable<KeyValuePair<string, string>>> getBindMaps(ValidResultConfig vrc)
     {
 
         Dictionary<string, IEnumerable<KeyValuePair<string, string>>> bindmaps = new Dictionary<string, IEnumerable<KeyValuePair<string, string>>>();
-        var yaml = new YamlStream();
-
-        using (var sr = new FileInfo(configs[EPconfigsEnum.dataResultMappingPath.ToString()]).OpenText())
-
-            yaml.Load(sr);
-
-        bindmaps.Add (XCDconfigsEnum.resultMap.ToString(), ((YamlMappingNode)yaml.Documents[0].RootNode).Children.Select(entry => new KeyValuePair<string, string>( entry.Key.ToString(),  entry.Value.ToString() )));
 
 
-        using (var sr = new FileInfo(configs[EPconfigsEnum.IAFormatFields.ToString()]).OpenText())
+        bindmaps.Add(XCDconfigsEnum.resultMap.ToString(), YamlTools.getResultKVFromYaml(vrc.resultMappingPath));
 
-            yaml.Load(sr);
 
-        bindmaps.Add(XCDconfigsEnum.IAFormatFields.ToString(),((YamlMappingNode)yaml.Documents[0].RootNode).Children.Select(entry => new KeyValuePair<string, string>( entry.Key.ToString(),  entry.Value.ToString() )));
 
-        using (var sr = new FileInfo(configs[EPconfigsEnum.dataResultValMapping.ToString()]).OpenText())
+        bindmaps.Add(XCDconfigsEnum.IAFormatFields.ToString(), YamlTools.getResultKVFromYaml(vrc.IAFormatFields));
 
-            yaml.Load(sr);
+       
 
-        bindmaps.Add(XCDconfigsEnum.dataResultValMapping.ToString(), ((YamlMappingNode)yaml.Documents[0].RootNode).Children.Select(entry => new KeyValuePair<string, string>(entry.Key.ToString(), entry.Value.ToString())));
+        bindmaps.Add(XCDconfigsEnum.dataResultValMapping.ToString(), YamlTools.getResultKVFromYaml(vrc.resultValMappingPath));
 
         return bindmaps;
     }
@@ -111,7 +107,7 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
        
     }
 
-    public override bool? process(Outlook.MailItem subject, IControl<FileInfo, IValidationConfigCol<IValidator<string, string>, EmailValidatorConfig>, Dictionary<string,ValidResults>> controller, IDictionary<string, string> configs = null)
+    public override bool? process(Outlook.MailItem subject, IControl<FileInfo, IValidationConfigCol<IValidator<string, string>, EmailValidatorConfig>, Dictionary<ValidResultConfig, Dictionary<String, ValidResults>>> controller, IDictionary<string, string> configs = null)
     {
             String moveto = null,rhtml=null;
         bool clearCat = false, movetoinbox = false;
@@ -122,7 +118,7 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
 
 
             Dictionary<EmailValidatorConfig, IEnumerable<Tuple<String, String, Boolean?>>> avalCols = new Dictionary<EmailValidatorConfig, IEnumerable<Tuple<String, String, Boolean?>>>();
-            Dictionary<String, ValidResults> resultsCol = new Dictionary<String, ValidResults>(); ;
+            Dictionary<ValidResultConfig, Dictionary<String, ValidResults>> resultsCol = new Dictionary<ValidResultConfig, Dictionary<String, ValidResults>>();
             try
             {
                 for (int i = 1; i <= attachments.Count; i++)
@@ -139,7 +135,7 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
 
                         var d = Directory.CreateDirectory($@"temp\{Guid.NewGuid()}");
 
-                        var path = Tools.GetUniqueFileName(Path.Combine(d.FullName, attachment.FileName));
+                        var path = Tools.GetUniqueFileName(Path.Combine(d.FullName,attachment.FileName.Replace("~","").Trim()));
 
 
 
@@ -169,7 +165,7 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
                 }
                 var guid = Guid.NewGuid().ToString();
 
-                var pstpath = configs.ContainsKey(PSTconfigsEnum.pstPath.ToString()) && !String.IsNullOrWhiteSpace(configs[PSTconfigsEnum.pstPath.ToString()]) ? Directory.CreateDirectory(configs[PSTconfigsEnum.pstPath.ToString()]).FullName : "";
+           
 
                 var evals = new Dictionary<String, String>() {
                              { ConfigHelper.Email_Date, subject.ReceivedTime.ToString("MM/dd/yyyy HH:mm:ss")},
@@ -177,69 +173,100 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
                             { ConfigHelper.Sender_Email_Address,OutlookHelper.GetSenderEmailAddr(subject)},
                             { ConfigHelper.SN,ConsolidateHelper.TimeLapsedID}
                         };
-
+                var pstpath = configs.ContainsKey(PSTconfigsEnum.pstPath.ToString()) ? Directory.CreateDirectory(pnc?.execute( configs[PSTconfigsEnum.pstPath.ToString()],null,null)?? configs[PSTconfigsEnum.pstPath.ToString()]).FullName : "";
                 if (success&&resultsCol.Any())
                 {
 
-                    var tdpath = $"temp\\{guid}.xlsx";
-                    var dpath = configs[XCDconfigsEnum.dpath.ToString()];
-                  
-
-                    if (File.Exists(dpath))
-                        if (!Tools.FileOverWriteCopy(dpath, tdpath))
-
-                            throw new Exception("Unable to create temp data result @:" + tdpath);
-                    var bindmaps = getBindMaps(configs);
-                  
-                    configs[XCDconfigsEnum.cwwsn.ToString()] = Path.GetFileNameWithoutExtension(dpath);
-                    var headers = DATARSTHeader.headers[configs[XCDconfigsEnum.headersID.ToString()]];
-                    using (PersistenceSQLProcessor pp = new PersistenceSQLProcessor(String.IsNullOrWhiteSpace(pstpath)?"":Path.Combine(pstpath,guid+".data"), configs.ContainsKey(PSTconfigsEnum.pstConnString.ToString())&&!String.IsNullOrWhiteSpace(configs[PSTconfigsEnum.pstConnString.ToString()]) ? configs[PSTconfigsEnum.pstConnString.ToString()] : ""))
-                    using (XlsxResultProcessor p = new XlsxResultProcessor(tdpath, configs[XCDconfigsEnum.cwwsn.ToString()], bindmaps, headers))
-                        success = new XlsxConsolidator()
-                        {
-
-                            evals = evals,
-                            headers = headers,
-                            bindmaps = bindmaps
-
-                        }.consolidate(new List<IProcessor<IDictionary<String, String>, Object>>() { configs.ContainsKey(PSTconfigsEnum.pstConnString.ToString()) && !String.IsNullOrWhiteSpace(configs[PSTconfigsEnum.pstConnString.ToString()]) ? pp : null, p }, resultsCol, configs);
-
-                   
-
-
-                    if (success && mergeTempResults(tdpath, dpath))
+                    foreach (var aresultsCol in resultsCol)
                     {
-                        moveto = configs[EPconfigsEnum.sucFolder.ToString()];
-                        moveto = configs[EPconfigsEnum.sucFolder.ToString()];
-                        try
-                        {
-                            if (configs.ContainsKey(EPconfigsEnum.saveMailPath.ToString()))
-                                saveMailtoLocal(subject, configs[EPconfigsEnum.saveMailPath.ToString()]);
+                        var tdpath = $@"temp\${Guid.NewGuid()}";
+                        var dpath = pnc?.execute(aresultsCol.Key.targetPath, null, null) ?? aresultsCol.Key.targetPath;
 
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log(ex);
-                        }
-                    }
-                    else
-                    {
-                        Logger.Log($"Attachment [{attachment.FileName}] consolidation filed...");
 
-                        return false;
+                        if (File.Exists(dpath))
+                        {
+                            if (!Tools.FileOverWriteCopy(dpath, tdpath))
+                                throw new Exception($"Unable to create temp data result [{dpath}] to [{tdpath}]");
+                        }
+                        else if (File.Exists(aresultsCol.Key.tempatePath) && !Tools.FileOverWriteCopy(aresultsCol.Key.tempatePath, tdpath))
+                            throw new Exception($"Unable to create temp data result [{aresultsCol.Key.tempatePath}] to [{tdpath}] with template [{aresultsCol.Key.tempatePath}]");
+
+
+                        var bindmaps = getBindMaps(aresultsCol.Key);
+
+                        configs[XCDconfigsEnum.cwwsn.ToString()] = aresultsCol.Key.targetSheet ?? Path.GetFileNameWithoutExtension(dpath);
+                        var headersID = aresultsCol.Key.headersPath;
+                        if (!String.IsNullOrWhiteSpace(headersID) && !DATARSTHeader.headers.ContainsKey(headersID))
+                        {
+                            YamlStream yaml = new YamlStream();
+                            using (var sr = new FileInfo(headersID).OpenText())
+
+                                yaml.Load(sr);
+                            (yaml.Documents[0].RootNode as YamlMappingNode).Children.Where(e => !ConsolidateHelper.isIgnoredHeader(e.Value?.ToString())).Select(e => new DATARSTHeader(e.Value.ToString(), headersID, DATARSTHeader.headers.GetValueOrDefault(headersID)?.FirstOrDefault(h => h.name == e.Value.ToString())?.value ?? 0)).ToArray();
+                        }
+                        var headers = DATARSTHeader.headers?.GetValueOrDefault(headersID);
+
+                        var sqlPFile = String.IsNullOrWhiteSpace(aresultsCol.Key.sqlPath) ? "" : (pnc?.execute(aresultsCol.Key.sqlPath, null, null) ?? aresultsCol.Key.sqlPath);
+
+                        if (File.Exists(aresultsCol.Key.sqlTemplatePath))
+                            if (!Tools.FileOverWriteCopy(aresultsCol.Key.sqlTemplatePath, sqlPFile))
+                                throw new Exception("Unable to create temp data result @:" + tdpath);
+                        configs[PSTconfigsEnum.template.ToString()] = aresultsCol.Key.sqlQueryTemplate;
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(sqlPFile));
+                        Directory.CreateDirectory(Path.GetDirectoryName(dpath));
+
+                        using (PersistenceSQLProcessor pp = String.IsNullOrWhiteSpace(sqlPFile) ? null : new PersistenceSQLProcessor(sqlPFile, configs.ContainsKey(PSTconfigsEnum.pstConnString.ToString()) && !String.IsNullOrWhiteSpace(configs[PSTconfigsEnum.pstConnString.ToString()]) ? configs[PSTconfigsEnum.pstConnString.ToString()] : "", bindmaps))
+                        using (XlsxResultProcessor p = String.IsNullOrWhiteSpace(dpath) ? null : new XlsxResultProcessor(tdpath, configs[XCDconfigsEnum.cwwsn.ToString()], bindmaps, headers))
+
+                            success = new XlsxConsolidator()
+                            {
+                                headers = headers,
+                                evals = evals,
+                                bindmaps = bindmaps
+
+                            }.consolidate(new List<IProcessor<IDictionary<String, String>, Object>>() { pp, p }, aresultsCol.Value, configs);
+
+                        //Transfering consolation results to designated paths
+                        if(! mergeTempResults(tdpath, dpath))                        
+                            throw new Exception($"[{dpath}] transfer filed...");
+                        if (!String.IsNullOrWhiteSpace(sqlPFile)&&! Tools.FileOverWriteMove(sqlPFile, sqlPFile + ".sql"))
+                            throw new Exception($"[{sqlPFile}] transfer filed...");
+
                     }
+
+                        if (success )
+                        {
+                            moveto = configs[EPconfigsEnum.sucFolder.ToString()];
+                            try
+                            {
+                                if (configs.ContainsKey(EPconfigsEnum.saveMailPath.ToString()))
+                                    saveMailtoLocal(subject, configs[EPconfigsEnum.saveMailPath.ToString()]);
+                                
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log(ex);
+                            }
+                        }
+                        else
+
+                            throw new Exception($"Attachment [{attachment.FileName}] consolidation filed...");
+
+                    
+                    
                    
                     
                 }
 
                 try
                 {
+                    if(configs.ContainsKey(EPconfigsEnum.emailLogConnString.ToString()))
+                    foreach (var fname in resultsCol.SelectMany(r=>r.Value))
 
-                    foreach (var fname in resultsCol)
 
 
-
-                        using (PersistenceSQLProcessor pp = new PersistenceSQLProcessor(Path.Combine(pstpath, guid + ".log"), configs[EPconfigsEnum.emailLogConnString.ToString()]))
+                        using (PersistenceSQLProcessor pp = new PersistenceSQLProcessor(Path.Combine(pstpath, guid + ".log"), configs[EPconfigsEnum.emailLogConnString.ToString()],null))
                             Logger.WriteToConsole($"Logged to DB for [{fname.Key}], result:{pp.process(evals.Append(new KeyValuePair<string, string>("ImportResult", fname.Value.Any(v => v.Value == false) ? "FAIL" : "SUCCESS")).Append(new KeyValuePair<string, string>("ImportErrorMessage", Tools.SafeSubstring($"[{String.Join(",", fname.Value?.Select(v => $"{{\"{v.Key}\":\"{v.Value?.ToString() ?? "null"}\"}}"))}]", 0, 499))).Append(new KeyValuePair<string, string>("AttachmentFileName", Tools.SafeSubstring(Path.GetFileName(fname.Key), 0, 99))).Append(new KeyValuePair<string, string>("Filename", Tools.SafeSubstring(Path.GetFileName(currentEmailFilePath ?? ""), 0, 99))).Append(new KeyValuePair<string, string>("guid", guid)).ToDictionary(prop => prop.Key, prop => prop.Value), null, new Dictionary<String, String>() { { PSTconfigsEnum.template.ToString(), configs[EPconfigsEnum.emailLogTemplate.ToString()] } })}");
 
                 }
@@ -332,7 +359,7 @@ public class EmailProcessor: ValidatorConfigProcessor<Outlook.MailItem>
         {
             if (movetoinbox) { clearCat = true; moveto = configs[EPconfigsEnum.retfolder.ToString()]; }
 
-            if (clearCat) { subject.Categories = null; subject.Save(); }
+            if (clearCat) { subject.Categories = null; subject.Save();  }
 
             if (moveto != null && moveto != configs[EPconfigsEnum.destFolder.ToString()])
             {

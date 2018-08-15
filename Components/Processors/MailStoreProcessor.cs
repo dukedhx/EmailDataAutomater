@@ -6,12 +6,26 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 using System.Linq;
 using ClassLibrary1.Utils;
 using System.Runtime.InteropServices;
-using ConsoleApp1.Components.Consolidators;
 
-namespace ConsoleApp1.Components.Processors
+namespace ConsoleApp1.Components.Contollers
 {
     public class MailStoreProcessor : IProcessor<MailStoreConfig, Object>
     {
+        public ProperNameController pnc; //Adapter to fill in proper nouns in string, e.g. {year},{today},{guid} ...
+        /*
+            Log on to the running Outlook instance
+            This processor requires a running Outlook instance with sufficient access to all relevant Exchange resources (e.g. mailstores, folders and their permissions)
+             */
+        public static Outlook.NameSpace logOn(Outlook.Application oApp)
+        {
+            
+            Outlook.NameSpace oNS = oApp.GetNamespace("MAPI");
+            oNS.Logon("Outlook", Type.Missing, false, true);
+            return oNS;
+        }
+        /*
+            Process mail items in a given mailstore and its designated folders, see class MailStorConfig for config details
+             */
         public bool? process(MailStoreConfig subject, Object controller, IDictionary<string, string> configs = null)
         {
             Outlook.Application oApp = null;
@@ -28,15 +42,13 @@ namespace ConsoleApp1.Components.Processors
             {
                 configs = configs ?? new Dictionary<string, string>();
                 //Interop with Outlook and log on
-                oApp = new Outlook.Application();
-                oNS = oApp.GetNamespace("MAPI");
-                oNS.Logon("Outlook", Type.Missing, false, true);
+                oNS = logOn(oApp = new Outlook.Application());
                 var store = oApp.Session.Stores[subject.storename];
                 rootf = store.GetRootFolder();
                 configs[EPconfigsEnum.storename.ToString()] = subject.storename;
 
-                configs[XCDconfigsEnum.dpath.ToString()] = subject.dpath;
-                configs[EPconfigsEnum.saveMailPath.ToString()] = subject.savemailpath;
+             //   configs[XCDconfigsEnum.dpath.ToString()] = subject.dpath;
+                configs[EPconfigsEnum.saveMailPath.ToString()] = pnc?.execute (subject.savemailpath,null,null)?? subject.savemailpath;
 
                 configs[EPconfigsEnum.retfolder.ToString()] = String.IsNullOrWhiteSpace( subject.retfolder) ? "Inbox" : subject.retfolder;
    
@@ -57,7 +69,7 @@ namespace ConsoleApp1.Components.Processors
                   
 
 
-                    return new EmailProcessor() { oApp = oApp, sendResponse = true, saveChanges = true, moveFolder=true, validColsCols=subject.validColsCol.SelectMany(vc=>vc), vconfigCol=subject.validColsCol }.process(mail,null,configs);
+                    return new EmailProcessor() { oApp = oApp, sendResponse = true, saveChanges = true, moveFolder=true, validColsCols=subject.validColsCol.SelectMany(vc=>vc), vconfigCol=subject.validColsCol,pnc=new ProperNameController() }.process(mail,null,configs);
                 }
                 return true;
 
@@ -68,7 +80,7 @@ namespace ConsoleApp1.Components.Processors
                 return false;
             }
             finally {
-      ;
+      
 
                 if (mail != null)
                     Marshal.ReleaseComObject(mail);

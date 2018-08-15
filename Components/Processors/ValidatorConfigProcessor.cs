@@ -9,18 +9,18 @@ using System.Text;
 
 namespace ConsoleApp1.Components.Controllers
 {
-  public  abstract class ValidatorConfigProcessor<T> : IProcessor<T, IControl<FileInfo, IValidationConfigCol<IValidator<String, String>, EmailValidatorConfig>, Dictionary<string,ValidResults>>>
+  public  abstract class ValidatorConfigProcessor<T> : IProcessor<T, IControl<FileInfo, IValidationConfigCol<IValidator<String, String>, EmailValidatorConfig>, Dictionary<ValidResultConfig, Dictionary<String, ValidResults>>>>
     {
         public bool success=true;
         public IEnumerable<EmailValidatorConfigCol> vconfigCol;
         protected abstract String GetRelativeId(String id);
 
-        public abstract bool? process(T subject, IControl<FileInfo, IValidationConfigCol<IValidator<string, string>, EmailValidatorConfig>, Dictionary<string, ValidResults>> controller, IDictionary<string, string> configs = null);
+        public abstract bool? process(T subject, IControl<FileInfo, IValidationConfigCol<IValidator<string, string>, EmailValidatorConfig>, Dictionary<ValidResultConfig, Dictionary<String, ValidResults>>> controller, IDictionary<string, string> configs = null);
 
-        public Dictionary<String, ValidResults> ExecuteValidationConfig(IEnumerable<EmailValidatorConfigCol> validColsCol, Dictionary<EmailValidatorConfig, IEnumerable<Tuple<String, String, Boolean?>>> avalCols,String path, Dictionary<String, ValidResults> resultsCol)
+        public Dictionary<ValidResultConfig, Dictionary<String, ValidResults>> ExecuteValidationConfig(IEnumerable<EmailValidatorConfigCol> validColsCol, Dictionary<EmailValidatorConfig, IEnumerable<Tuple<String, String, Boolean?>>> avalCols,String path, Dictionary<ValidResultConfig, Dictionary<String, ValidResults>> resultsCol)
         {
 
-            ValidResults vr = new ValidResults();
+           // ValidResults vr = new ValidResults();
 
             foreach (var validCols in validColsCol)
             {
@@ -50,6 +50,7 @@ namespace ConsoleApp1.Components.Controllers
 
                         if (t.rejectOnInvalid) success = false;
                         var rsts = results.Select(r => Tuple.Create(GetRelativeId(path), r.Key, r.Value));
+                        
                         if (avalCols.ContainsKey(t))
                             avalCols[t].Concat(rsts);
                         else avalCols.Add(t, new LinkedList<Tuple<String, String, Boolean?>>(rsts));
@@ -68,9 +69,12 @@ namespace ConsoleApp1.Components.Controllers
                     }
                     if (success)
 
-
-
-                        vr.AddAll(results);
+                    {
+                        if( !resultsCol.ContainsKey(results.config)) resultsCol.Add(results.config, new Dictionary<string, ValidResults>());
+                        var acol = resultsCol[results.config];
+                        if (acol.ContainsKey(path))   acol[path].AddAll(results); else acol[path] = results;
+                    }
+                 //   vr.AddAll(results);
 
 
                     if (t.sucTemplate != null && !avalCols.ContainsKey(t))
@@ -83,14 +87,14 @@ namespace ConsoleApp1.Components.Controllers
                 
             }
 
-            if (success)
-            {
+            //if (success)
+            //{
 
-                if (!String.IsNullOrWhiteSpace(vr.sheetName))
-                    resultsCol.Add(path, vr);
-                //  rhtml.Add((vr.ID = attachment.FileName), "Success");
+            //    if (!String.IsNullOrWhiteSpace(vr.sheetName))
+                    
+            //    //  rhtml.Add((vr.ID = attachment.FileName), "Success");
 
-            }
+            //}
 
             return resultsCol;
 

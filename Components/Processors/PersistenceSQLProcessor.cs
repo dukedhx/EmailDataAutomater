@@ -1,18 +1,20 @@
 ﻿using ClassLibrary1.Utils;
 using ClassLibrary1.Utils.Persistence;
+using ConsoleApp1.Components.Consolidators;
 using ConsoleApp1.Components.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace ConsoleApp1.Components.Processors
+namespace ConsoleApp1.Components.Contollers
 {
     public enum PSTconfigsEnum { template=1,ppResultMap=2, pstPath=3,pstConnString=4}
     public class PersistenceSQLProcessor : IProcessor<IDictionary<String, String>, Object>, IDisposable
     {
         private readonly String path;
         private readonly StreamWriter handle;
+        private Dictionary<string, string[]> fflds;
 
         protected bool finalize()
         {
@@ -20,10 +22,13 @@ namespace ConsoleApp1.Components.Processors
 
         }
 
-        public PersistenceSQLProcessor(String path,String connstring)
+        public PersistenceSQLProcessor(String path,String connstring, IDictionary<string, IEnumerable<KeyValuePair<string, string>>> bindmaps)
         {
+            if(bindmaps!=null)
+            this.fflds = bindmaps[XCDconfigsEnum.IAFormatFields.ToString()].ToDictionary(prop => prop.Key, prop => prop.Value?.Split(","));
             if (!String.IsNullOrWhiteSpace(path)) {
                 handle = File.AppendText(path);
+                if(!String.IsNullOrWhiteSpace(connstring))
                 handle.WriteLine($"/* {connstring} */");
                 this.path = path;
             }
@@ -35,7 +40,7 @@ namespace ConsoleApp1.Components.Processors
             {
                 var queryTemplate = configs[PSTconfigsEnum.template.ToString()];
                 if (String.IsNullOrWhiteSpace(queryTemplate) || subject == null || !subject.Keys.Any()) return false;
-                handle.WriteLine(subject.Aggregate(queryTemplate, (c, v) => c.Replace($"@'{v.Key}'@", MySQLHelper.sanitizeQuery(v.Value))) + ";");
+                handle.WriteLine(subject.Aggregate(queryTemplate, (c, v) => c.Replace($"@'{v.Key}'@", MySQLHelper.sanitizeQuery(fflds?.GetValueOrDefault("date")?.Any(f => f.Equals(v.Key, StringComparison.OrdinalIgnoreCase)) == true ? DateTime.Parse(v.Value).ToString("MM/dd/yyyy") : v.Value))) + ";");
                 return true;
 
             }
@@ -59,7 +64,7 @@ namespace ConsoleApp1.Components.Processors
                         handle?.Flush();
                         handle?.Close();
                     
-                        finalize();
+                    //    finalize();
                     
                     // TODO: dispose managed state (managed objects).
                 }
